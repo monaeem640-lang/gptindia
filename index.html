@@ -676,7 +676,7 @@ function drawQR(containerId, text) {
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
-      if (attempts > 60) {
+      if (attempts > 90) {
         clearInterval(interval);
         document.getElementById('resStatus').textContent = '⚠️ Order Timed Out';
         btnCreateQr.disabled = false;
@@ -687,31 +687,41 @@ function drawQR(containerId, text) {
       try {
         let data = null;
         try {
-          // Direct fast poll to Duskyr API (0ms Netlify lambda bottleneck)
-          const directRes = await fetch(`https://duskyr.com/api/upi/v1/order/${encodeURIComponent(code)}`, {
-            headers: { 'Authorization': `Bearer ${keyToUse}` }
-          });
-          data = await directRes.json();
-        } catch(err) {
-          // Fallback to proxy
           const proxyRes = await fetch(`${API_ENDPOINT}/order/${encodeURIComponent(code)}`);
           data = await proxyRes.json();
+        } catch(err) {}
+
+        if (!data || !data.payment_url) {
+          try {
+            const directRes = await fetch(`https://duskyr.com/api/upi/v1/order/${encodeURIComponent(code)}`, {
+              headers: { 'Authorization': `Bearer ${keyToUse}` }
+            });
+            const directData = await directRes.json();
+            if (directData && (directData.payment_url || directData.status)) {
+              data = directData;
+            }
+          } catch(e) {}
         }
 
-        if (data && data.status === 'completed' && data.payment_url) {
-          clearInterval(interval);
-          currentGeneratedUrl = data.payment_url;
-          document.getElementById('resStatus').textContent = 'ChatGPT Plus UPI QR Ready';
-          document.getElementById('resStatus').style.color = 'var(--success)';
-          document.getElementById('resultPayLink').href = data.payment_url;
-          drawQR('resultQrCanvas', data.payment_url);
-          btnCreateQr.disabled = false;
-          btnCreateQr.innerHTML = '<span>Create UPI Link · 1 Credit</span>';
-          showToast('🎉 ChatGPT Payment QR Ready!');
-          return;
+        const payUrl = data ? (data.payment_url || (data.data && data.data.payment_url)) : null;
+        const status = data ? (data.status || (data.data && data.data.status)) : null;
+
+        if (payUrl || status === 'completed' || status === 'ready' || status === 'success') {
+          if (payUrl) {
+            clearInterval(interval);
+            currentGeneratedUrl = payUrl;
+            document.getElementById('resStatus').textContent = 'ChatGPT Plus UPI QR Ready';
+            document.getElementById('resStatus').style.color = 'var(--success)';
+            document.getElementById('resultPayLink').href = payUrl;
+            drawQR('resultQrCanvas', payUrl);
+            btnCreateQr.disabled = false;
+            btnCreateQr.innerHTML = '<span>Create UPI Link · 1 Credit</span>';
+            showToast('🎉 ChatGPT Payment QR Ready!');
+            return;
+          }
         }
 
-        if (data && (data.status === 'failed' || (data.ok === false && data.status !== 'processing'))) {
+        if (data && (status === 'failed' || data.ok === false) && status !== 'processing' && status !== 'pending') {
           clearInterval(interval);
           const errReason = data.message || data.error || 'Session rejected or expired. Please use a fresh session token.';
           document.getElementById('resStatus').textContent = '❌ Creation Failed';
