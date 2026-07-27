@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>GPT India — UPI QR Creator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #030712;
+    --card: rgba(15, 23, 42, 0.78);
+    --card-border: rgba(99, 102, 241, 0.28);
+    --card-border-glow: rgba(99, 102, 241, 0.5);
+    --tile: #0a0f1d;
+    --tile-hover: #11192e;
+    --text: #f8fafc;
+    --sub: #94a3b8;
+    --dim: #64748b;
+    
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --primary-glow: rgba(99, 102, 241, 0.45);
+    
+    --accent: #06b6d4;
+    --accent-glow: rgba(6, 182, 212, 0.4);
+    
+    --success: #10b981;
+    --success-glow: rgba(16, 185, 129, 0.4);
+    
+    --warning: #f59e0b;
+    --error: #ef4444;
+
+    --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-main);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 16px 16px 90px;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Neon Live Particle Canvas Background */
+  #particleCanvas {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0; width: 100%; height: 100%;
+  }
+
+  .wrap { max-width: 650px; margin: 0 auto; position: relative; z-index: 2; }
+
+  /* Floating Sticky Glass Header */
+  .sticky-nav {
+    position: sticky; top: 12px; z-index: 100;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+    border: 1px solid var(--card-border-glow);
+    border-radius: 22px;
+    padding: 12px 22px;
+    margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.9), 0 0 30px rgba(99, 102, 241, 0.15);
+  }
+  .nav-brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 16.5px; letter-spacing: -0.02em; }
+  .nav-icon {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 22px -4px var(--primary-glow);
+  }
+  .nav-icon svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 2.2; }
+  .nav-badge {
+    background: var(--tile); border: 1px solid var(--card-border);
+    padding: 7px 16px; border-radius: 30px; font-family: var(--font-mono);
+    font-size: 13px; font-weight: 700; color: var(--warning); display: flex; align-items: center; gap: 8px;
+    box-shadow: inset 0 0 12px rgba(0,0,0,0.5);
+  }
+  .nav-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+  .nav-badge.active { color: var(--success); border-color: rgba(16, 185, 129, 0.45); background: rgba(16, 185, 129, 0.09); }
+
+  /* Hero Section */
+  header { text-align: center; margin: 16px 0 32px; }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 30px; background: rgba(99, 102, 241, 0.14);
+    border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8;
+    font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;
+    margin-bottom: 14px; box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+  }
+  h1 { font-size: 30px; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 8px; background: linear-gradient(135deg, #ffffff 30%, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .tagline { color: var(--sub); font-size: 15px; }
+
+  /* Premium Crystal Card Styles */
+  .card {
+    background: var(--card);
+    backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+    border: 1px solid var(--card-border);
+    border-radius: 28px;
+    padding: 30px;
+    box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.9), 0 0 25px rgba(99, 102, 241, 0.08);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s ease;
+  }
+  .card:hover { border-color: rgba(99, 102, 241, 0.4); }
+
+  label { display: block; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; color: var(--sub); margin-bottom: 10px; text-transform: uppercase; }
+  label .req { color: var(--primary); }
+
+  input, textarea {
+    width: 100%; background: var(--tile); border: 1px solid var(--card-border);
+    border-radius: 18px; color: var(--text); font-size: 14.5px; font-family: var(--font-mono);
+    padding: 16px 20px; outline: none; transition: all 0.25s ease;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-glow); background: var(--tile-hover); }
+  textarea { min-height: 125px; resize: vertical; line-height: 1.5; }
+  .hint { font-size: 12px; color: var(--dim); margin-top: 8px; }
+
+  .key-row { display: flex; gap: 12px; }
+  .key-row input { flex: 1; text-transform: uppercase; font-weight: 800; letter-spacing: 0.06em; }
+  
+  .btn-sm {
+    padding: 0 26px; height: 56px; border-radius: 18px; border: none;
+    background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+    color: #fff; font-weight: 800; font-size: 14.5px; cursor: pointer;
+    box-shadow: 0 10px 28px -6px var(--primary-glow); transition: all 0.2s ease;
+    white-space: nowrap; flex: none;
+  }
+  .btn-sm:hover { transform: translateY(-2px); box-shadow: 0 14px 34px -4px var(--primary-glow); }
+  .btn-sm:active { transform: translateY(0); }
+
+  /* Locked overlay for session token */
+  .locked-wrap { position: relative; }
+  .lock-overlay {
+    position: absolute; inset: 0; background: rgba(7, 10, 18, 0.94);
+    backdrop-filter: blur(12px); border-radius: 18px; border: 1.5px dashed var(--warning);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; text-align: center; padding: 24px; z-index: 10;
+    transition: all 0.3s ease;
+  }
+  .lock-overlay.unlocked { opacity: 0; visibility: hidden; pointer-events: none; }
+  .lock-icon { width: 48px; height: 48px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); color: var(--warning); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px rgba(245, 158, 11, 0.2); }
+  .lock-msg { font-size: 15px; font-weight: 800; color: var(--warning); }
+  .lock-sub { font-size: 13px; color: var(--sub); }
+
+  /* Primary Action Button */
+  .btn-main {
+    width: 100%; height: 60px; border: none; border-radius: 20px; cursor: pointer;
+    background: linear-gradient(135deg, #10b981, #059669); color: #fff;
+    font-size: 17px; font-weight: 800; letter-spacing: -0.01em;
+    box-shadow: 0 12px 36px -8px var(--success-glow); margin-top: 24px;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: all 0.2s ease;
+  }
+  .btn-main:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 18px 42px -6px var(--success-glow); }
+  .btn-main:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; filter: grayscale(0.6); }
+
+  /* Loading Spinner */
+  .spin {
+    width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Result Display Card */
+  .result-card { display: none; }
+  .result-card.show { display: block; animation: slideUp 0.4s ease both; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+  .qr-result-box {
+    width: 250px; height: 250px; margin: 22px auto; background: #ffffff;
+    padding: 16px; border-radius: 24px; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 255, 255, 0.2);
+  }
+  .qr-result-box img { width: 100% !important; height: 100% !important; display: block; }
+
+  .action-btn-group { display: flex; gap: 14px; margin-bottom: 18px; }
+  .action-btn-group a, .action-btn-group button {
+    flex: 1; height: 52px; border-radius: 16px; font-weight: 800; font-size: 15px;
+    display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none;
+    border: none; cursor: pointer;
+  }
+  .btn-primary-action { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); color: #fff; box-shadow: 0 10px 28px -6px var(--primary-glow); }
+  .btn-secondary-action { background: var(--tile); border: 1px solid var(--card-border); color: var(--text); }
+
+  /* Pricing Cards */
+  .plans-title { font-size: 19px; font-weight: 800; text-align: center; margin-bottom: 20px; }
+  .plans-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .plan-card {
+    background: var(--tile); border: 1.5px solid var(--card-border); border-radius: 22px;
+    padding: 24px 18px; text-align: center; cursor: pointer; position: relative;
+    transition: all 0.25s ease;
+  }
+  .plan-card:hover { border-color: var(--primary); transform: translateY(-4px); background: var(--tile-hover); box-shadow: 0 14px 32px -10px var(--primary-glow); }
+  .plan-card.popular { border-color: var(--success); background: rgba(16, 185, 129, 0.05); }
+  .plan-badge {
+    position: absolute; top: -12px; right: 16px; background: var(--success); color: #000;
+    font-size: 10.5px; font-weight: 900; padding: 4px 12px; border-radius: 20px; text-transform: uppercase;
+    letter-spacing: 0.04em; box-shadow: 0 0 12px var(--success-glow);
+  }
+  .plan-price { font-size: 28px; font-weight: 900; color: var(--text); }
+  .plan-credits { font-size: 14px; font-weight: 700; color: var(--success); margin: 6px 0 8px; }
+  .plan-desc { font-size: 12px; color: var(--sub); }
+
+  /* UPI Box */
+  .upi-box {
+    background: var(--tile); border: 1.5px solid var(--card-border); border-radius: 24px;
+    padding: 28px; text-align: center; margin-top: 22px; display: none;
+    box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.8);
+  }
+  .upi-box.show { display: block; animation: slideUp 0.35s ease; }
+  .upi-qr-frame {
+    width: 240px; height: 240px; margin: 20px auto; background: #ffffff;
+    padding: 16px; border-radius: 24px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  }
+  .upi-qr-frame img { width: 100% !important; height: 100% !important; display: block; }
+  .upi-info-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 18px 0 20px; flex-wrap: wrap; }
+  .upi-id-pill {
+    background: var(--card); border: 1px solid var(--card-border); padding: 12px 22px;
+    border-radius: 30px; font-family: var(--font-mono); font-weight: 800; font-size: 15px;
+    color: var(--success); display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.15);
+  }
+  .btn-copy {
+    background: rgba(99, 102, 241, 0.15); border: 1px solid var(--primary); color: #fff;
+    padding: 12px 20px; border-radius: 16px; font-size: 13.5px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .btn-copy:hover { background: rgba(99, 102, 241, 0.35); }
+
+  .toast {
+    position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #111827; border: 1px solid var(--card-border-glow); color: #fff;
+    padding: 14px 26px; border-radius: 18px; font-size: 14px; font-weight: 700;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95), 0 0 20px var(--primary-glow); opacity: 0; pointer-events: none;
+    transition: all 0.25s ease; z-index: 300;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  footer { text-align: center; color: var(--dim); font-size: 12.5px; margin-top: 40px; line-height: 1.6; }
+
+  /* ============================================================
+     Sticky Bottom-Right Developer Badge ("Developed by Sam Khan")
+     ============================================================ */
+  .developer-badge {
+    position: fixed; bottom: 20px; right: 20px; z-index: 150;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(99, 102, 241, 0.45);
+    box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.9), 0 0 20px rgba(99, 102, 241, 0.3);
+    border-radius: 30px;
+    padding: 10px 18px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 700; color: #f8fafc;
+    animation: badgeFloat 3.5s ease-in-out infinite alternate;
+  }
+  .developer-badge b {
+    background: linear-gradient(135deg, #818cf8, #38bdf8, #34d399);
+    background-size: 200% 200%;
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    animation: gradientShift 4s ease infinite;
+    font-weight: 900; letter-spacing: -0.01em;
+  }
+  .sparkle-dot {
+    width: 9px; height: 9px; border-radius: 50%; background: #10b981;
+    box-shadow: 0 0 10px #10b981, 0 0 20px #10b981;
+    animation: pulseGlow 1.5s ease-in-out infinite;
+  }
+
+  @keyframes badgeFloat {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-5px); }
+  }
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  @keyframes pulseGlow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.75); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Neon Live Animated Particles Canvas -->
+<canvas id="particleCanvas"></canvas>
+
+<div class="wrap">
+  <!-- Sticky Crystal Clear Header Bar -->
+  <div class="sticky-nav">
+    <div class="nav-brand">
+      <div class="nav-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <span>GPT India</span>
+    </div>
+    <div class="nav-badge" id="navBadge">
+      <span class="dot"></span>
+      <span id="navBadgeText">Locked</span>
+    </div>
+  </div>
+
+  <header>
+    <div class="hero-tag">⚡ Automated SaaS Platform</div>
+    <h1>GPT India UPI Creator</h1>
+    <p class="tagline">Convert ChatGPT sessions to instant scannable UPI payment QR codes</p>
+  </header>
+
+  <!-- Card 1: Customer Key Activation -->
+  <div class="card">
+    <label>Customer License Key <span class="req">*</span></label>
+    <div class="key-row">
+      <input id="custKey" type="text" placeholder="e.g. GPTIND_XXXXXX" spellcheck="false" autocomplete="off">
+      <button class="btn-sm" id="btnVerifyKey" type="button">Activate Key</button>
+    </div>
+    <p class="hint">Don't have a key? Purchase credits below to get your instant key.</p>
+  </div>
+
+  <!-- Card 2: ChatGPT Session Area (Locked / Unlocked) -->
+  <div class="card">
+    <label>ChatGPT Session Token / JSON <span class="req">*</span></label>
+    <div class="locked-wrap">
+      <div class="lock-overlay" id="lockOverlay">
+        <div class="lock-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <div class="lock-msg">Session Section Locked</div>
+        <div class="lock-sub">Enter a valid Customer Key above to unlock</div>
+      </div>
+      <textarea id="sessionInput" placeholder="Paste full ChatGPT session JSON (from chatgpt.com/api/auth/session) or raw accessToken"></textarea>
+    </div>
+
+    <div class="field" style="margin-top: 18px;">
+      <label>Order Reference <span style="color:var(--dim); font-weight:500">(Optional)</span></label>
+      <input id="refInput" type="text" placeholder="e.g. order-1001">
+      <p class="hint">Your custom reference id to ensure safe idempotent requests.</p>
+    </div>
+
+    <button class="btn-main" id="btnCreateQr" disabled>
+      <span>Create UPI Link · 1 Credit</span>
+    </button>
+  </div>
+
+  <!-- Card 3: Generated ChatGPT Plus Result QR -->
+  <div class="card result-card" id="resultCard">
+    <div style="text-align:center;">
+      <div style="display:inline-block; padding:5px 14px; background:rgba(16,185,129,0.15); border:1px solid var(--success); color:var(--success); border-radius:20px; font-size:12px; font-weight:800; text-transform:uppercase; margin-bottom:12px; box-shadow: 0 0 14px var(--success-glow);">
+        ChatGPT Plus Activation QR
+      </div>
+      <div style="font-size:22px; font-weight:900; color:var(--text);" id="resStatus">Generating Payment QR...</div>
+      <div style="font-size:13px; color:var(--sub); margin-top:4px;" id="resOrderCode"></div>
+
+      <div class="qr-result-box">
+        <div id="resultQrCanvas"></div>
+      </div>
+
+      <div class="action-btn-group">
+        <a id="resultPayLink" href="#" target="_blank" class="btn-primary-action">
+          ⚡ Open Payment Page
+        </a>
+        <button class="btn-secondary-action" onclick="copyPaymentUrl()">
+          📋 Copy Link
+        </button>
+      </div>
+
+      <div class="hint" style="font-size:13px; color:var(--sub);">
+        The customer scans this QR in GPay / PhonePe / Paytm to confirm payment within 5 minutes.
+      </div>
+      <button class="btn-sm" style="margin-top:22px; width:100%; background:var(--tile); border:1px solid var(--card-border);" onclick="resetForm()">Create Another Link</button>
+    </div>
+  </div>
+
+  <!-- Card 4: Purchase Customer Credits (Hidden when key is active) -->
+  <div class="card" id="pricingCard">
+    <div class="plans-title">💳 Purchase Customer Credits</div>
+    
+    <div class="plans-grid">
+      <div class="plan-card" onclick="selectPlan(40, 1, 'Starter Plan')">
+        <div class="plan-price">₹40</div>
+        <div class="plan-credits">1 Credit (1 Key / Link)</div>
+        <div class="plan-desc">Single ChatGPT Plus Activation</div>
+      </div>
+
+      <div class="plan-card popular" onclick="selectPlan(350, 15, 'Pro Saver Plan')">
+        <div class="plan-badge">BEST VALUE</div>
+        <div class="plan-price">₹350</div>
+        <div class="plan-credits">15 Credits (15 Keys / Links)</div>
+        <div class="plan-desc">₹23.3 / Link · Save 41%</div>
+      </div>
+    </div>
+
+    <!-- Interactive UPI Payment Box for iamubbb@ibl -->
+    <div class="upi-box" id="upiBox">
+      <div style="font-size:17px; font-weight:800; color:var(--text);" id="selectedPlanTitle">Pay ₹40 for 1 Credit</div>
+      <div style="font-size:13px; color:var(--sub); margin-top:4px;">Scan with GPay / PhonePe / Paytm / BHIM to buy credits</div>
+
+      <div class="upi-qr-frame">
+        <div id="upiQrCanvas"></div>
+      </div>
+
+      <div class="upi-info-row">
+        <span class="upi-id-pill">UPI ID: iamubbb@ibl</span>
+        <button class="btn-copy" onclick="copyUpiId()">Copy UPI ID</button>
+      </div>
+
+      <div>
+        <a id="payDeepLink" class="btn-primary-action" href="#" style="height:54px; width:100%; border-radius:18px;">
+          ⚡ Open Payment App Now
+        </a>
+      </div>
+
+      <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--card-border); font-size:12.5px; color:var(--sub); line-height:1.5;">
+        After paying, send your payment screenshot / UTR to Admin on WhatsApp or Telegram to receive your <b>Customer Key</b>.
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    GPT India UPI Creator · Instant ChatGPT Plus UPI Payment Generator
+  </footer>
+</div>
+
+<!-- Sticky Bottom-Right Animated Developer Badge -->
+<div class="developer-badge">
+  <span class="sparkle-dot"></span>
+  <span>Developed by <b>Sam Khan</b></span>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Neon Particle Background Script -->
+<script>
+(function() {
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let width, height;
+  let particles = [];
+
+  function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const colors = ['rgba(99, 102, 241, ', 'rgba(6, 182, 212, ', 'rgba(16, 185, 129, '];
+
+  class Particle {
+    constructor() {
+      this.reset();
+    }
+    reset() {
+      this.x = Math.random() * width;
+      this.y = Math.random() * height;
+      this.radius = Math.random() * 2.5 + 1;
+      this.colorBase = colors[Math.floor(Math.random() * colors.length)];
+      this.alpha = Math.random() * 0.5 + 0.25;
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = (Math.random() - 0.5) * 0.4;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.x < 0 || this.x > width) this.vx *= -1;
+      if (this.y < 0 || this.y > height) this.vy *= -1;
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+      ctx.fillStyle = this.colorBase + this.alpha + ')';
+      ctx.shadowColor = this.colorBase + '0.8)';
+      ctx.shadowBlur = 12;
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < 38; i++) {
+    particles.push(new Particle());
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, width, height);
+    particles.forEach(p => {
+      p.update();
+      p.draw();
+    });
+    requestAnimationFrame(animate);
+  }
+  animate();
+})();
+</script>
+
+<script>
+/* High-Resolution QR Renderer */
+function drawQR(containerId, text) {
+  var container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = "";
+
+  var img = document.createElement("img");
+  img.src = "https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=8&data=" + encodeURIComponent(text);
+  img.alt = "UPI Payment QR Code";
+  img.style.width = "100%";
+  img.style.height = "100%";
+  img.style.objectFit = "contain";
+  img.style.borderRadius = "12px";
+  img.style.display = "block";
+
+  container.appendChild(img);
+}
+</script>
+
+<script>
+  const API_ENDPOINT = '/api';
+  let activeCustomerKey = localStorage.getItem('gpt_cust_key') || '';
+  let activeCredits = 0;
+  let currentGeneratedUrl = '';
+
+  const custKeyInput = document.getElementById('custKey');
+  const btnVerifyKey = document.getElementById('btnVerifyKey');
+  const navBadge = document.getElementById('navBadge');
+  const navBadgeText = document.getElementById('navBadgeText');
+  const lockOverlay = document.getElementById('lockOverlay');
+  const sessionInput = document.getElementById('sessionInput');
+  const btnCreateQr = document.getElementById('btnCreateQr');
+  const toastEl = document.getElementById('toast');
+
+  if (activeCustomerKey) {
+    custKeyInput.value = activeCustomerKey;
+    verifyKey(activeCustomerKey, true);
+  }
+
+  btnVerifyKey.addEventListener('click', () => {
+    const k = custKeyInput.value.trim();
+    if (!k) { showToast('Please enter a Customer Key'); return; }
+    verifyKey(k, false);
+  });
+
+  async function verifyKey(key, isSilent = false) {
+    btnVerifyKey.disabled = true;
+    btnVerifyKey.textContent = 'Verifying...';
+    let savedState = null;
+    try { savedState = JSON.parse(localStorage.getItem('gpt_cust_key_state') || 'null'); } catch(e){}
+
+    try {
+      const res = await fetch(`${API_ENDPOINT}/verify-key`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: key, key_state: savedState })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.ok) {
+        activeCustomerKey = key;
+        activeCredits = data.credits;
+        localStorage.setItem('gpt_cust_key', key);
+        if (data.key_state) {
+          localStorage.setItem('gpt_cust_key_state', JSON.stringify(data.key_state));
+        }
+
+        if (activeCredits > 0) {
+          navBadgeText.textContent = `${activeCredits} Credits`;
+          navBadge.classList.add('active');
+          lockOverlay.classList.add('unlocked');
+          btnCreateQr.disabled = false;
+          document.getElementById('pricingCard').style.display = 'none'; // Hide buy credits box when key is active
+          if (!isSilent) showToast(`Key Activated! ${activeCredits} credits remaining.`);
+        } else {
+          navBadgeText.textContent = `0 Credits`;
+          navBadge.classList.remove('active');
+          lockOverlay.classList.remove('unlocked');
+          btnCreateQr.disabled = true;
+          document.getElementById('pricingCard').style.display = 'block';
+          if (!isSilent) showToast('0 credits remaining. Purchase credits below to create more links!');
+        }
+      } else {
+        navBadgeText.textContent = `Locked`;
+        navBadge.classList.remove('active');
+        lockOverlay.classList.remove('unlocked');
+        btnCreateQr.disabled = true;
+        document.getElementById('pricingCard').style.display = 'block';
+        if (!isSilent) showToast(data.message || 'Invalid key');
+      }
+    } catch (e) {
+      if (!isSilent) showToast('Error connecting to backend');
+    } finally {
+      btnVerifyKey.disabled = false;
+      btnVerifyKey.textContent = 'Activate Key';
+    }
+  }
+
+  // Submit ChatGPT session and create UPI QR link
+  btnCreateQr.addEventListener('click', async () => {
+    const sess = sessionInput.value.trim();
+    const ref = document.getElementById('refInput').value.trim();
+
+    if (!activeCustomerKey || activeCredits <= 0) {
+      showToast('Please activate a key with credits first'); return;
+    }
+    if (!sess) {
+      showToast('Paste a valid ChatGPT Session JSON or token'); return;
+    }
+
+    btnCreateQr.disabled = true;
+    btnCreateQr.innerHTML = '<span class="spin"></span> <span>Creating ChatGPT Plus UPI Link...</span>';
+
+    let savedState = null;
+    try { savedState = JSON.parse(localStorage.getItem('gpt_cust_key_state') || 'null'); } catch(e){}
+
+    try {
+      const res = await fetch(`${API_ENDPOINT}/create-qr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: activeCustomerKey,
+          key_state: savedState,
+          session_json: sess,
+          reference: ref
+        })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.ok) {
+        showToast('🎉 UPI Order Created! 1 Credit Deducted.');
+        if (data.key_state) {
+          localStorage.setItem('gpt_cust_key_state', JSON.stringify(data.key_state));
+        }
+
+        if (data.payment_url) {
+          currentGeneratedUrl = data.payment_url;
+          document.getElementById('resultCard').classList.add('show');
+          document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+          document.getElementById('resStatus').textContent = 'ChatGPT Plus UPI QR Ready';
+          document.getElementById('resOrderCode').textContent = `Order Code: #${data.order_code || 'DONE'}`;
+          document.getElementById('resultPayLink').href = data.payment_url;
+          drawQR('resultQrCanvas', data.payment_url);
+          btnCreateQr.disabled = false;
+          btnCreateQr.innerHTML = '<span>Create UPI Link · 1 Credit</span>';
+        } else if (data.order_code) {
+          pollOrderStatus(data.order_code, data.master_key);
+        }
+        verifyKey(activeCustomerKey, true); // silent update
+      } else {
+        showToast(data.message || 'Failed to create QR link');
+        btnCreateQr.disabled = false;
+        btnCreateQr.innerHTML = '<span>Create UPI Link · 1 Credit</span>';
+      }
+    } catch (e) {
+      showToast('Server connection failed');
+      btnCreateQr.disabled = false;
+      btnCreateQr.innerHTML = '<span>Create UPI Link · 1 Credit</span>';
+    }
+  });
+
+  async function pollOrderStatus(code, masterKey) {
+    document.getElementById('upiBox').classList.remove('show');
+    document.getElementById('resultCard').classList.add('show');
+    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('resStatus').textContent = 'Creating UPI Payment Link...';
+    document.getElementById('resOrderCode').textContent = `Order Code: #${code}`;
+
+    const keyToUse = masterKey || 'upi_live_087a45b4c6aa8f4d7af201a0e6a53090';
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      if (attempts > 60) {
+        clearInterval(interval);
+        document.getElementById('resStatus').textContent = '⚠️ Order Timed Out';
+        btnCreateQr.disabled = false;
+        btnCreateQr.innerHTML = '<span>Create UPI Link · 1 Credit</span>';
+        showToast('Order creation timed out. Please verify your session JSON and try again.');
+        return;
+      }
+      try {
+        let data = null;
+        try {
+          // Direct fast poll to Duskyr API (0ms Netlify lambda bottleneck)
+          const directRes = await fetch(`https://duskyr.com/api/upi/v1/order/${encodeURIComponent(code)}`, {
+            headers: { 'Authorization': `Bearer ${keyToUse}` }
+          });
+          data = await directRes.json();
+        } catch(err) {
+          // Fallback to proxy
+          const proxyRes = await fetch(`${API_ENDPOINT}/order/${encodeURIComponent(code)}`);
+          data = await proxyRes.json();
+        }
+
+        if (data && data.status === 'completed' && data.payment_url) {
+          clearInterval(interval);
+          currentGeneratedUrl = data.payment_url;
+          document.getElementById('resStatus').textContent = 'ChatGPT Plus UPI QR Ready';
+          document.getElementById('resStatus').style.color = 'var(--success)';
+          document.getElementById('resultPayLink').href = data.payment_url;
+          drawQR('resultQrCanvas', data.payment_url);
+          btnCreateQr.disabled = false;
+          btnCreateQr.innerHTML = '<span>Create UPI Link · 1 Credit</span>';
+          showToast('🎉 ChatGPT Payment QR Ready!');
+          return;
+        }
+
+        if (data && (data.status === 'failed' || (data.ok === false && data.status !== 'processing'))) {
+          clearInterval(interval);
+          const errReason = data.message || data.error || 'Session rejected or expired. Please use a fresh session token.';
+          document.getElementById('resStatus').textContent = '❌ Creation Failed';
+          document.getElementById('resOrderCode').textContent = errReason;
+          btnCreateQr.disabled = false;
+          btnCreateQr.innerHTML = '<span>Create UPI Link · 1 Credit</span>';
+          showToast(errReason);
+          return;
+        }
+      } catch (e) {}
+    }, 2000);
+  }
+
+  function copyPaymentUrl() {
+    if (!currentGeneratedUrl) { showToast('No URL generated yet'); return; }
+    navigator.clipboard.writeText(currentGeneratedUrl);
+    showToast('ChatGPT Payment Link copied!');
+  }
+
+  // Plan Selection & UPI QR for iamubbb@ibl
+  function selectPlan(amount, credits, title, shouldScroll = true) {
+    document.getElementById('upiBox').classList.add('show');
+    document.getElementById('selectedPlanTitle').textContent = `Pay ₹${amount} for ${credits} Credit(s)`;
+
+    const upiUri = `upi://pay?pa=iamubbb@ibl&pn=GPT%20India&am=${amount}&cu=INR&tn=Credits%20Purchase`;
+    drawQR('upiQrCanvas', upiUri);
+
+    document.getElementById('payDeepLink').href = upiUri;
+    if (shouldScroll) {
+      document.getElementById('upiBox').scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  function copyUpiId() {
+    navigator.clipboard.writeText('iamubbb@ibl');
+    showToast('UPI ID (iamubbb@ibl) copied!');
+  }
+
+  function resetForm() {
+    document.getElementById('resultCard').classList.remove('show');
+    sessionInput.value = '';
+    currentGeneratedUrl = '';
+  }
+
+  function showToast(msg) {
+    toastEl.textContent = msg; toastEl.classList.add('show');
+    setTimeout(() => toastEl.classList.remove('show'), 2400);
+  }
+</script>
+</body>
+</html>
