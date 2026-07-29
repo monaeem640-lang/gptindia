@@ -374,6 +374,18 @@ def deliver_qr_result(chat_id, message_id, payment_url, order_code, active_key):
 def direct_session_handler(message):
     process_create_qr(message)
 
+# Handle .json or .txt file uploads sent directly to bot
+@bot.message_handler(content_types=['document'])
+def handle_document_session(message):
+    try:
+        file_info = bot.get_file(message.document.file_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+        content_text = downloaded_file.decode('utf-8', errors='ignore')
+        message.text = content_text
+        process_create_qr(message)
+    except Exception as e:
+        bot.reply_to(message, f"❌ Error reading uploaded file: {str(e)}")
+
 # -------------------------------------------------------------------
 # Buy Credits & Plans
 # -------------------------------------------------------------------
