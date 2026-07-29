@@ -165,10 +165,11 @@ exports.handler = async (event, context) => {
   }
 
   // -------------------------------------------------------------------
-  // 3. CUSTOMER: Poll Order Status
+  // 3. CUSTOMER: Poll Order Status & Auto-refund on failure
   // -------------------------------------------------------------------
   if (path.startsWith('order/')) {
     const orderCode = path.replace('order/', '').trim();
+    const customerKey = (event.queryStringParameters && event.queryStringParameters.key) || (body && body.key);
     if (!orderCode) return jsonResponse(400, { ok: false, message: 'Order code missing.' });
 
     try {
@@ -181,9 +182,24 @@ exports.handler = async (event, context) => {
         }
       });
 
-      return jsonResponse(upstreamRes.status, upstreamRes.data || { ok: false });
+      const resData = upstreamRes.data || {};
+
+      // Auto-refund credit if order failed and key is provided
+      if (resData.status === 'failed' && customerKey && global.KEYS_STORE[customerKey]) {
+        if (!global.KEYS_STORE[customerKey].refunded_orders) {
+          global.KEYS_STORE[customerKey].refunded_orders = {};
+        }
+        if (!global.KEYS_STORE[customerKey].refunded_orders[orderCode]) {
+          global.KEYS_STORE[customerKey].refunded_orders[orderCode] = true;
+          global.KEYS_STORE[customerKey].credits += 1;
+          resData.credit_refunded = true;
+          resData.new_credits = global.KEYS_STORE[customerKey].credits;
+        }
+      }
+
+      return jsonResponse(upstreamRes.status, resData);
     } catch (err) {
-      return jsonResponse(500, { ok: false, message: 'Error fetching order status.' });
+      return jsonResponse(500, { ok: false, message: 'Error fetching order status: ' + err.message });
     }
   }
 
