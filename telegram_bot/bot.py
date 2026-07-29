@@ -131,6 +131,33 @@ def callback_handler(call):
             return
         send_admin_menu(chat_id)
 
+    elif call.data == "admin_gen_key_menu":
+        if ADMIN_ID != 0 and user_id != ADMIN_ID: return
+        send_gen_key_options(chat_id)
+
+    elif call.data.startswith("gen_key_"):
+        if ADMIN_ID != 0 and user_id != ADMIN_ID: return
+        val = call.data.replace("gen_key_", "")
+        if val == "custom":
+            msg = bot.send_message(chat_id, "🔢 <b>Enter custom number of credits:</b>\n(e.g., <code>25</code>)")
+            bot.register_next_step_handler(msg, process_custom_gen_key)
+        else:
+            credits = int(val)
+            plan = f"₹40 Plan (1 Credit)" if credits == 1 else (f"₹350 Plan (15 Credits)" if credits == 15 else f"{credits} Credits Plan")
+            new_k, info = db.generate_key(credits, plan)
+            send_key_result(chat_id, new_k, credits, plan)
+
+    elif call.data == "admin_list_keys":
+        if ADMIN_ID != 0 and user_id != ADMIN_ID: return
+        keys_map = db.list_all_keys()
+        if not keys_map:
+            bot.send_message(chat_id, "No keys found.")
+            return
+        txt = "🔑 <b>Active Customer Keys:</b>\n\n"
+        for k, v in list(keys_map.items())[:25]:
+            txt += f"• <code>{k}</code> — <b>{v.get('credits',0)} credits</b> (Used: {v.get('total_used',0)})\n"
+        bot.send_message(chat_id, txt)
+
 # -------------------------------------------------------------------
 # Key Activation Logic
 # -------------------------------------------------------------------
@@ -331,11 +358,45 @@ def admin_command(message):
 def send_admin_menu(chat_id):
     txt = (
         f"👑 <b>Admin Dashboard</b>\n\n"
-        f"<b>Available Admin Commands:</b>\n"
-        f"• <code>/genkey &lt;credits&gt;</code> - Generate new key\n"
-        f"• <code>/addcredits &lt;key&gt; &lt;amount&gt;</code> - Topup key\n"
-        f"• <code>/listkeys</code> - View all keys\n"
-        f"• <code>/revoke &lt;key&gt;</code> - Revoke a key"
+        f"Generate customer license keys or manage active key balances below."
+    )
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        types.InlineKeyboardButton("➕ Generate Key", callback_data="admin_gen_key_menu"),
+        types.InlineKeyboardButton("🔑 List Active Keys", callback_data="admin_list_keys"),
+    )
+    bot.send_message(chat_id, txt, reply_markup=markup)
+
+def send_gen_key_options(chat_id):
+    txt = "➕ <b>Generate New Customer Key</b>\n\nSelect how many credits to assign to this key:"
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    markup.add(
+        types.InlineKeyboardButton("₹40 Plan (1 Credit)", callback_data="gen_key_1"),
+        types.InlineKeyboardButton("₹350 Plan (15 Credits)", callback_data="gen_key_15"),
+        types.InlineKeyboardButton("5 Credits", callback_data="gen_key_5"),
+        types.InlineKeyboardButton("50 Credits", callback_data="gen_key_50"),
+        types.InlineKeyboardButton("🔢 Custom Amount", callback_data="gen_key_custom"),
+    )
+    bot.send_message(chat_id, txt, reply_markup=markup)
+
+def process_custom_gen_key(message):
+    try:
+        credits = int(message.text.strip())
+        if credits <= 0: raise ValueError()
+        plan = f"Custom Plan ({credits} Credits)"
+        new_k, info = db.generate_key(credits, plan)
+        send_key_result(message.chat.id, new_k, credits, plan)
+    except Exception:
+        bot.reply_to(message, "❌ Invalid number of credits. Please enter a valid positive integer.")
+
+def send_key_result(chat_id, key, credits, plan_name):
+    txt = (
+        f"🎉 <b>New Customer License Key Generated!</b>\n\n"
+        f"🔑 <b>Key:</b> <code>{key}</code>\n"
+        f"💳 <b>Credits:</b> {credits}\n"
+        f"📦 <b>Plan:</b> {plan_name}\n\n"
+        f"<b>Customer Message (Copy & Send):</b>\n"
+        f"<code>Here is your GPT India Customer Key: {key} ({credits} Credits). Enter /key {key} in the bot to activate!</code>"
     )
     bot.send_message(chat_id, txt)
 
@@ -343,9 +404,13 @@ def send_admin_menu(chat_id):
 def genkey_cmd(message):
     if ADMIN_ID != 0 and message.from_user.id != ADMIN_ID: return
     args = message.text.split()
-    credits = int(args[1]) if len(args) > 1 else 1
+    try:
+        raw_val = args[1].replace("<", "").replace(">", "").strip() if len(args) > 1 else "1"
+        credits = int(raw_val)
+    except Exception:
+        credits = 1
     new_key, key_info = db.generate_key(credits)
-    bot.reply_to(message, f"✅ <b>Generated New Customer Key!</b>\n\n🔑 <b>Key:</b> <code>{new_key}</code>\n💳 <b>Credits:</b> {credits}")
+    send_key_result(message.chat.id, new_key, credits, f"{credits} Credit(s) Plan")
 
 @bot.message_handler(commands=['addcredits'])
 def addcredits_cmd(message):
@@ -355,7 +420,11 @@ def addcredits_cmd(message):
         bot.reply_to(message, "Usage: <code>/addcredits GPTIND_XXXXXX 5</code>")
         return
     target_key = args[1].strip()
-    amt = int(args[2])
+    try:
+        raw_val = args[2].replace("<", "").replace(">", "").strip()
+        amt = int(raw_val)
+    except Exception:
+        amt = 1
     new_bal = db.add_credits(target_key, amt)
     bot.reply_to(message, f"✅ <b>Added +{amt} Credits to <code>{target_key}</code></b>\nNew Balance: {new_bal} Credits")
 
