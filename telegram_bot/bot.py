@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import json
 import io
@@ -9,9 +10,13 @@ import telebot
 from telebot import types
 import database as db
 
+# Ensure UTF-8 stdout encoding for Windows console
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
+
 # Configuration
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "7961205315:AAHQvR4w5_2yY_96g3jJ3K6Xw3X-Q9Y-1Z4") # Replace with your token
-ADMIN_ID = int(os.getenv("ADMIN_ID", "0"))  # Set your Telegram numeric ID or 0 for public admin commands
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8674876250:AAECHLOkHqRTzJU4dCaL9AODOXZYlku0GXk")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "8303549154"))
 MASTER_API_KEY = os.getenv("MASTER_API_KEY", "upi_live_087a45b4c6aa8f4d7af201a0e6a53090")
 UPSTREAM_HOST = "https://duskyr.com"
 
