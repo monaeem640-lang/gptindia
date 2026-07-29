@@ -331,10 +331,16 @@ def poll_order_status(chat_id, message_id, order_code, active_key):
 
     # Timeout
     db.refund_credit(active_key, order_code)
-    bot.edit_message_text(
-        f"⚠️ <b>Order Timed Out</b>\n\nThe upstream server took too long. Please verify your ChatGPT session token and try again.\n\n✓ <b>Your 1 Credit was refunded!</b>",
-        chat_id, message_id
+    timeout_text = (
+        f"⚠️ <b>Order Timed Out</b>\n\n"
+        f"The upstream gateway took longer than 90s to log into your ChatGPT session.\n\n"
+        f"💡 <b>Common Reasons & Fixes:</b>\n"
+        f"1. <b>Session Expired/Logged Out:</b> Get a fresh token from <a href='https://chatgpt.com/api/auth/session'>chatgpt.com/api/auth/session</a>\n"
+        f"2. <b>Already Subscribed:</b> Ensure your account does NOT already have an active Plus plan.\n"
+        f"3. <b>Security Verification:</b> Open <a href='https://chatgpt.com'>chatgpt.com</a> in your browser, ask any question to ensure no CAPTCHA is pending, then get a new session JSON.\n\n"
+        f"✓ <b>Your 1 Credit was 100% refunded!</b>"
     )
+    bot.edit_message_text(timeout_text, chat_id, message_id, disable_web_page_preview=True)
 
 def deliver_qr_result(chat_id, message_id, payment_url, order_code, active_key):
     # Delete loading text message

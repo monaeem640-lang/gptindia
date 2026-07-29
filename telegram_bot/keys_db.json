@@ -12,9 +12,10 @@
     "credits": 1,
     "plan_name": "\u20b940 Plan (1 Credit)",
     "created_at": "2026-07-29T04:27:50.039268",
-    "total_used": 1,
+    "total_used": 2,
     "refunded_orders": {
-      "UPI-DA98CAD9EE": true
+      "UPI-DA98CAD9EE": true,
+      "UPI-A764B52E4C": true
     }
   }
 }
