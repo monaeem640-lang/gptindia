@@ -183,22 +183,68 @@ def process_set_key_text(message, key_str):
     credits = key_data.get("credits", 0)
     bot.reply_to(message, f"🎉 <b>Key Activated Successfully!</b>\n\n🔑 <b>Key:</b> <code>{key_str}</code>\n💳 <b>Credits:</b> {credits}\n\nYou can now send your ChatGPT session to generate QR links!")
 
+# Helper: Validate and Auto-Format ChatGPT Session
+import re
+
+def validate_and_format_session(raw_text):
+    if not raw_text:
+        return False, "Empty session input.", None
+
+    text = raw_text.strip()
+
+    # 1. Try parsing as valid JSON directly
+    try:
+        data = json.loads(text)
+        if isinstance(data, dict):
+            if "accessToken" in data or "access_token" in data or "user" in data:
+                return True, "Valid Session JSON", json.dumps(data)
+            return True, "Valid Session JSON", json.dumps(data)
+    except Exception:
+        pass
+
+    # 2. Extract JWT accessToken (starts with eyJ and has 3 parts)
+    jwt_match = re.search(r'eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}', text)
+    if jwt_match:
+        token = jwt_match.group(0)
+        formatted_json = json.dumps({"accessToken": token})
+        return True, "Extracted accessToken", formatted_json
+
+    # 3. Search for "accessToken":"..." key
+    acc_match = re.search(r'"accessToken"\s*:\s*"([^"]+)"', text)
+    if acc_match:
+        token = acc_match.group(1)
+        formatted_json = json.dumps({"accessToken": token})
+        return True, "Extracted accessToken key", formatted_json
+
+    return False, "Invalid session format. The text you pasted appears truncated or missing a valid accessToken.", None
+
 # -------------------------------------------------------------------
 # QR Creation & Upstream Polling
 # -------------------------------------------------------------------
 def process_create_qr(message):
     user_id = message.from_user.id
-    session_json = message.text.strip() if message.text else ""
+    raw_input = message.text.strip() if message.text else ""
 
     active_key = db.get_user_key(user_id)
     key_data = db.get_key_data(active_key) if active_key else None
 
     if not active_key or not key_data or key_data.get("credits", 0) <= 0:
-        bot.reply_to(message, "❌ Insufficient credits or key expired. Use /key or buy credits.")
+        bot.reply_to(message, "❌ Insufficient credits or no active key. Use /key <YOUR_KEY> or buy credits.")
         return
 
-    if len(session_json) < 10:
-        bot.reply_to(message, "❌ Invalid session input. Please paste your full session JSON or accessToken.")
+    # Validate and auto-format session token BEFORE deducting credit
+    is_valid, status_info, formatted_session = validate_and_format_session(raw_input)
+    if not is_valid:
+        guide_msg = (
+            f"❌ <b>Invalid ChatGPT Session Token</b>\n\n"
+            f"The text you pasted is incomplete or malformed.\n\n"
+            f"📌 <b>How to get a valid session token:</b>\n"
+            f"1. Log into <a href='https://chatgpt.com'>chatgpt.com</a>\n"
+            f"2. Open a new tab: <a href='https://chatgpt.com/api/auth/session'>chatgpt.com/api/auth/session</a>\n"
+            f"3. Copy the <b>ENTIRE</b> JSON text shown on that page and send it here!\n\n"
+            f"<i>✓ 0 Credits were deducted. Please copy the full session JSON and try again.</i>"
+        )
+        bot.reply_to(message, guide_msg, disable_web_page_preview=True)
         return
 
     # Deduct 1 credit
@@ -214,7 +260,7 @@ def process_create_qr(message):
         resp = requests.post(
             f"{UPSTREAM_HOST}/api/upi/v1/create",
             headers={"Authorization": f"Bearer {MASTER_API_KEY}", "Content-Type": "application/json"},
-            json={"session_json": session_json},
+            json={"session_json": formatted_session},
             timeout=15
         )
         res_json = resp.json()
@@ -316,7 +362,9 @@ def deliver_qr_result(chat_id, message_id, payment_url, order_code, active_key):
     bot.send_photo(chat_id, photo=qr_img_bytes, caption=caption, reply_markup=markup)
 
 # Handle raw session JSON text sent directly to bot
-@bot.message_handler(func=lambda message: message.text and ("accessToken" in message.text or "{" in message.text))
+@bot.message_handler(func=lambda message: message.text and not message.text.startswith("/") and (
+    "accessToken" in message.text or "eyJ" in message.text or "{" in message.text or len(message.text) > 60
+))
 def direct_session_handler(message):
     process_create_qr(message)
 
